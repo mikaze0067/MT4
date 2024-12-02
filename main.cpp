@@ -2,7 +2,7 @@
 #include <cmath>
 #include <cassert>
 
-const char kWindowTitle[] = "MT4_01_04_Basic";
+const char kWindowTitle[] = "MT4_01_05_ササノ";
 
 struct Vector3 {
 	float x, y, z;
@@ -10,6 +10,18 @@ struct Vector3 {
 
 struct Quaternion {
 	float x, y, z, w;
+
+	Quaternion operator*(float scalar) const {
+		return { x * scalar, y * scalar, z * scalar, w * scalar };
+	}
+
+	Quaternion operator+(const Quaternion& other) const {
+		return { x + other.x, y + other.y, z + other.z, w + other.w };
+	}
+
+	Quaternion operator-() const {
+		return { -x, -y, -z, -w };
+	}
 };
 
 struct Matrix4x4 {
@@ -148,6 +160,35 @@ Matrix4x4 MakeRotateMatrix(const Quaternion& quaternion) {
 	return matrix;
 }
 
+// 球面線形補間 (Spherical Linear Interpolation)
+Quaternion Slerp(const Quaternion& q0, const Quaternion& q1, float t) {
+	// q0 と q1 の内積
+	float dot = q0.x * q1.x + q0.y * q1.y + q0.z * q1.z + q0.w * q1.w;
+
+	
+	Quaternion q1_copy = q1;
+	if (dot < 0) {
+		q1_copy = -q1_copy; // 反転
+		dot = -dot;         // 内積も反転
+	}
+
+	// 内積が 1 に近い場合（角度がほぼ 0 の場合）
+	const float epsilon = 1e-6f;
+	if (1.0f - dot < epsilon) {
+		// 線形補間を使用
+		return (q0 * (1.0f - t) + q1_copy * t);
+	}
+
+	// なす角を求める
+	float theta = std::acos(dot);
+
+	// 補間係数を計算
+	float scale0 = std::sin((1 - t) * theta) / std::sin(theta);
+	float scale1 = std::sin(t * theta) / std::sin(theta);
+
+	// それぞれの補間係数を利用して補間後のQuaternionを求める
+	return (q0 * scale0 + q1_copy * scale1);
+}
 
 static const int kRowHeight = 20;
 static const int kColumnWidth = 60;
@@ -215,17 +256,24 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		/// ↓描画処理ここから
 		///
 
-		Quaternion rotation = MakeRotateAxisAngleQuaternion(Normalize(Vector3{ 1.0f, 0.4f, -0.2f }), 0.45f);
-		Vector3 pointY = { 2.1f, -0.9f, 1.3f };
-		Matrix4x4 rotateMatrix = MakeRotateMatrix(rotation);
-		Vector3 rotateByQuaternion = RotateVector(pointY, rotation);
-		Vector3 rotateByMatrix = Transform(pointY, rotateMatrix);
+		Quaternion rotation0 = MakeRotateAxisAngleQuaternion({ 0.71f,0.71f,0.0f }, 0.3f);
+		Quaternion rotation1 = MakeRotateAxisAngleQuaternion({ 0.71f,0.0f,0.71f }, 3.141592f);
 
-		QuaternionScreenPrintf(0, kRowHeight * 0, rotation, "   : rotation");
-		MatrixScreenPrintf(0, kRowHeight * 1, rotateMatrix, "rotateMatrix");
-		VectorScreenPrintf(0, kRowHeight * 6, rotateByQuaternion, "   : rotateByQuaternion");
-		VectorScreenPrintf(0, kRowHeight * 7, rotateByMatrix, "   : rotateByMatrix");
+		Quaternion interpolate0 = Slerp(rotation0, rotation1, 0.0f);
+		Quaternion interpolate1 = Slerp(rotation0, rotation1, 0.3f);
+		Quaternion interpolate2 = Slerp(rotation0, rotation1, 0.5f);
+		Quaternion interpolate3 = Slerp(rotation0, rotation1, 0.7f);
+		Quaternion interpolate4 = Slerp(rotation0, rotation1, 1.0f);
 
+
+
+		QuaternionScreenPrintf(0, kRowHeight * 0, interpolate0, "   : rotation0");
+		QuaternionScreenPrintf(0, kRowHeight * 1, interpolate1, "   : rotation1");
+		QuaternionScreenPrintf(0, kRowHeight * 2, interpolate2, "   : rotation2");
+		QuaternionScreenPrintf(0, kRowHeight * 3, interpolate3, "   : rotation3");
+		QuaternionScreenPrintf(0, kRowHeight * 4, interpolate4, "   : rotation4");
+
+		
 		///
 		/// ↑描画処理ここまで
 		///
