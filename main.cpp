@@ -72,6 +72,7 @@ Quaternion MakeRotateAxisAngleQuaternion(const Vector3& axis, float angle) {
 	return q;
 }
 
+
 Vector3 RotateVector(const Vector3& vector, const Quaternion& quaternion) {
 	// 1. ベクトルをクォータニオン形式に変換（スカラー部分は0）
 	Quaternion r = { vector.x, vector.y, vector.z, 0.0f };
